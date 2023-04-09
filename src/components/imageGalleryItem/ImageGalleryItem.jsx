@@ -1,34 +1,32 @@
 import PropTypes from 'prop-types';
-import { Component } from 'react';
 
-class ImageGalleryItem extends Component {
-  static propTypes = {
-    webformatURL: PropTypes.string.isRequired,
-    largeImageURL: PropTypes.string,
-    tags: PropTypes.string.isRequired,
-    onSelect: PropTypes.func.isRequired,
+export default function ImageGalleryItem({
+  webformatURL,
+  tags,
+  largeImageURL,
+  onSelect,
+}) {
+  const handleImgClick = () => {
+    onSelect(largeImageURL);
   };
 
-  handleImgClick = () => {
-    this.props.onSelect(this.props.largeImageURL);
-  };
-
-  render() {
-    const { webformatURL, tags, largeImageURL } = this.props;
-
-    return (
-      <li className="ImageGalleryItem">
-        <img src={webformatURL} alt={tags} onClick={this.handleImgClick} />
-        {largeImageURL && (
-          <div className="Overlay">
-            <div className="Modal">
-              <img src={largeImageURL} alt={tags} />
-            </div>
+  return (
+    <li className="ImageGalleryItem">
+      <img src={webformatURL} alt={tags} onClick={handleImgClick} />
+      {largeImageURL && (
+        <div className="Overlay">
+          <div className="Modal">
+            <img src={largeImageURL} alt={tags} />
           </div>
-        )}
-      </li>
-    );
-  }
+        </div>
+      )}
+    </li>
+  );
 }
 
-export default ImageGalleryItem;
+ImageGalleryItem.propTypes = {
+  webformatURL: PropTypes.string.isRequired,
+  largeImageURL: PropTypes.string,
+  tags: PropTypes.string.isRequired,
+  onSelect: PropTypes.func.isRequired,
+};

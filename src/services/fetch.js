@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const fetchImg = async (userQuery, page) => {
+const fetchImg = async (userQuery, page, controller) => {
   const params = {
     key: '33618284-b943b6a3bf9edd3f9e88f078b',
     q: userQuery,
@@ -11,10 +11,15 @@ const fetchImg = async (userQuery, page) => {
   };
 
   try {
-    const response = await axios.get('https://pixabay.com/api/', { params });
+    const response = await axios.get('https://pixabay.com/api/', {
+      params,
+      signal: controller.signal,
+    });
     return response.data;
   } catch (error) {
-    console.error(error);
+    if (controller.signal.aborted) {
+      console.log('Fetch aborted');
+    } else console.error(error);
     return [];
   }
 };

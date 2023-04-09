@@ -1,4 +1,4 @@
-import { Component } from 'react';
+import { useEffect, useState } from 'react';
 import '../../styles/styles.css';
 
 import ImageGallery from 'components/imageGallery/ImageGallery';
@@ -8,84 +8,76 @@ import fetchImg from 'services/fetch';
 import Button from 'components/button/Button';
 import Modal from 'components/modal/Modal';
 
-export class App extends Component {
-  state = {
-    requestedImg: [],
-    userQuery: '',
-    page: 1,
-    selectedImg: null,
-    error: null,
-    isLoading: false,
-    isShowModal: false,
-    isShowButton: false,
-  };
+export default function App() {
+  const [requestedImg, setRequestedImg] = useState([]);
+  const [userQuery, setUserQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [selectedImg, setSelectedImg] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isShowModal, setIsShowModal] = useState(false);
+  const [isShowButton, setIsShowButton] = useState(false);
 
-  componentDidUpdate(_, prevState) {
-    const { userQuery, page } = this.state;
-    if (prevState.userQuery !== userQuery || prevState.page !== page) {
-      this.loadImages(userQuery, page);
-    }
-  }
+  useEffect(() => {
+    const controller = new AbortController();
+    async function loadImages() {
+      setIsLoading(true);
 
-  async loadImages(userQuery, page) {
-    this.setState({ isLoading: true });
+      try {
+        const imagesData = await fetchImg(userQuery, page, controller);
 
-    try {
-      const newRequestedImg = await fetchImg(userQuery, page);
-      if (!newRequestedImg) {
-        throw new Error('No data from server!');
+        if (!imagesData || imagesData.hits.length === 0) {
+          throw new Error('No data from server!');
+        }
+        setRequestedImg(prevState => [...prevState, ...imagesData.hits]);
+        setIsShowButton(page < Math.ceil(imagesData.totalHits / 12));
+      } catch (error) {
+        console.log(error);
+      } finally {
+        setIsLoading(false);
       }
-      this.setState(prevState => ({
-        requestedImg: [...prevState.requestedImg, ...newRequestedImg.hits],
-        isShowButton:
-          this.state.page < Math.ceil(newRequestedImg.totalHits / 12),
-      }));
-    } catch (error) {
-      this.setState({ error });
-    } finally {
-      this.setState({ isLoading: false });
     }
-  }
+    if (userQuery.trim() !== '') {
+      loadImages();
+    }
+    return () => {
+      controller.abort();
+    };
+  }, [userQuery, page]);
 
-  onFormSubmit = query => {
-    this.setState({ userQuery: query, requestedImg: [], page: 1 });
+  const onFormSubmit = query => {
+    setUserQuery(query);
+    setPage(1);
+    setRequestedImg([]);
   };
 
-  handleLoadMore = () => {
-    this.setState(prevState => ({ page: prevState.page + 1 }));
+  const handleLoadMore = () => {
+    setPage(prevState => prevState + 1);
   };
 
-  toogleModal = () => {
-    this.setState(({ isShowModal }) => ({ isShowModal: !isShowModal }));
+  const toogleModal = () => {
+    setIsShowModal(prevIsShowModal => !prevIsShowModal);
   };
 
-  onSelectImg = largeImgURL => {
-    this.setState({ selectedImg: largeImgURL, isShowModal: true });
+  const onSelectImg = largeImgURL => {
+    setSelectedImg(largeImgURL);
+    setIsShowModal(true);
   };
 
-  render() {
-    const { isLoading, isShowModal, isShowButton, requestedImg, selectedImg } =
-      this.state;
+  return (
+    <div className="App">
+      <Searchbar onFormSubmit={onFormSubmit} />
 
-    return (
-      <div className="App">
-        <Searchbar onFormSubmit={this.onFormSubmit} />
+      {requestedImg && requestedImg.length > 0 && (
+        <>
+          <ImageGallery requestedImg={requestedImg} onSelect={onSelectImg} />
+          {isLoading && <Loader />}
+          {isShowButton && <Button onClick={handleLoadMore} />}
+        </>
+      )}
 
-        {requestedImg.length > 0 && (
-          <>
-            <ImageGallery
-              requestedImg={requestedImg}
-              onSelect={this.onSelectImg}
-            />
-            {isLoading && <Loader />}
-            {isShowButton && <Button onClick={this.handleLoadMore} />}
-          </>
-        )}
-
-        {isShowModal && (
-          <Modal onClose={this.toogleModal} selectedImg={selectedImg}></Modal>
-        )}
-      </div>
-    );
-  }
+      {isShowModal && (
+        <Modal onClose={toogleModal} selectedImg={selectedImg}></Modal>
+      )}
+    </div>
+  );
 }
